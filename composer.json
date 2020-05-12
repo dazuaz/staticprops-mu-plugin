@@ -1,0 +1,23 @@
+{
+  "name": "staticprops/main",
+  "description": "Staticprops Plugin description",
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "staticprops"
+  ],
+  "homepage": "https://staticprops.com",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Daniel Zuloaga",
+      "email": "daniel@staticprops.com",
+      "homepage": "https://staticprops.com"
+    }
+  ],
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=7.3",
+    "composer/installers": "v1.9.0"
+  }
+}
