@@ -1,6 +1,6 @@
 {
-	"name": "staticprops/staticprops-mu",
-	"description": "Staticprops Plugin, that adds support to use Wordpress as a on-build Headless CMS",
+	"name": "staticprops/staticprops-mu-plugin",
+	"description": "Staticprops Must-Use Plugin, that adds specefic support to use Wordpress as a on-build Headless CMS",
 	"keywords": [
 		"wordpress",
 		"headless",
