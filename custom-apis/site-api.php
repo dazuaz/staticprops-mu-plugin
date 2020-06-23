@@ -92,7 +92,7 @@ class SiteApi extends WP_REST_Controller
 		if (!function_exists('wpmu_delete_blog')) {
 			require_once ABSPATH . '/wp-admin/includes/ms.php';
 		}
-		// $drop = true;
+		// $drop = true; // add this for instantly deleting websites
 		// wpmu_delete_blog($site_id, $drop);
 		wpmu_delete_blog($site_id);
 
