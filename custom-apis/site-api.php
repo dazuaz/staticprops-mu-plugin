@@ -21,6 +21,11 @@ class SiteApi extends WP_REST_Controller
 	 */
 	const PROP_TITLE = 'title';
 
+	/**
+	 * Title property name.
+	 */
+	const PROP_LANG = 'lang';
+
 	public function __construct()
 	{
 		$this->namespace = 'sp/v1';
@@ -37,10 +42,76 @@ class SiteApi extends WP_REST_Controller
 					$this,
 					'create_item_permissions_check',
 				],
-				'args' => $this->get_endpoint_args_for_item_schema(true),
+				'args' => $this->get_endpoint_args_for_item_schema(
+					WP_REST_Server::CREATABLE
+				),
 			],
 			'schema' => [$this, 'get_public_item_schema'],
 		]);
+		register_rest_route(
+			$this->namespace,
+			'/' . $this->rest_base . '/(?P<id>[\d]+)',
+			[
+				'args' => [
+					'id' => [
+						'description' => __('Unique identifier for the site.'),
+						'type' => 'integer',
+					],
+				],
+				[
+					'methods' => WP_REST_Server::DELETABLE,
+					'callback' => [$this, 'delete_item'],
+					'permission_callback' => [
+						$this,
+						'delete_item_permissions_check',
+					],
+					'args' => [
+						'force' => [
+							'type' => 'boolean',
+							'default' => false,
+							'description' => __(
+								'Required to be true, as users do not support trashing.'
+							),
+						],
+					],
+				],
+				'schema' => [$this, 'get_public_item_schema'],
+			]
+		);
+	}
+	/**
+	 * Delete one item from the collection
+	 *
+	 * @param WP_REST_Request $request Full data about the request.
+	 * @return WP_Error|WP_REST_Response
+	 */
+	public function delete_item($request)
+	{
+		$site_id = $request['id'];
+
+		if (!function_exists('wpmu_delete_blog')) {
+			require_once ABSPATH . '/wp-admin/includes/ms.php';
+		}
+		$drop = true;
+		wpmu_delete_blog($site_id, $drop);
+
+		return new WP_REST_Response(
+			(object) ['site_id' => $site_id, 'message' => 'Site deleted successfully'],
+			200
+		);
+
+		if (get_blog_status($site_id, 'deleted')) {
+			return new WP_REST_Response(
+				(object) ['site_id' => $site_id, 'message' => 'Site deleted successfully'],
+				200
+			);
+		} else {
+			return new WP_Error(
+				'rest_cannot_delete',
+				__('The site cannot be deleted.'),
+				['status' => 500]
+			);
+		}
 	}
 	/**
 	 * Get one item from the collection
@@ -129,26 +200,6 @@ class SiteApi extends WP_REST_Controller
 			$path = get_network()->path . $domain . '/';
 		}
 
-		// Handle translation installation for the new site.
-		// TODO enable language on create
-		if (isset($body['WPLANG'])) {
-			if ('' === $body['WPLANG']) {
-				$meta['WPLANG'] = ''; // en_US
-			} elseif (in_array($body['WPLANG'], get_available_languages())) {
-				$meta['WPLANG'] = $body['WPLANG'];
-			} elseif (
-				current_user_can('install_languages') &&
-				wp_can_install_language_pack()
-			) {
-				$language = wp_download_language_pack(
-					wp_unslash($body['WPLANG'])
-				);
-				if ($language) {
-					$meta['WPLANG'] = $language;
-				}
-			}
-		}
-
 		$password = 'N/A'; //send by email
 
 		$user_id = email_exists($email);
@@ -172,9 +223,7 @@ class SiteApi extends WP_REST_Controller
 		// $validate = wpmu_validate_blog_signup( $path, $title, $user_id );
 		// return new WP_Error( 'cant-create', __( print_r($validate), 'text-domain' ), array( 'status' => 500 ) );
 		$title = $site->title;
-		$meta = [
-			'public' => 1,
-		];
+		$meta = ['public' => 1];
 
 		$id = wpmu_create_blog(
 			$newdomain,
@@ -185,11 +234,12 @@ class SiteApi extends WP_REST_Controller
 			get_current_network_id()
 		);
 		if (is_wp_error($id)) {
-			return new WP_Error(
-				'rest_site_create',
-				__('Error creating site.'),
-				['status' => 500]
-			);
+			// return new WP_Error(
+			// 	'rest_site_create',
+			// 	__('Error creating site.'),
+			// 	['status' => 500]
+			// );
+			return $id;
 		} else {
 			return new WP_REST_Response(
 				(object) ['id' => $id, 'password' => $password],
@@ -222,15 +272,34 @@ class SiteApi extends WP_REST_Controller
 	 * @param WP_REST_Request $request Full data about the request.
 	 * @return WP_Error|bool
 	 */
-	public function create_item_permissions_check($request)
+	public function delete_item_permissions_check($request)
 	{
 		$auth_header = $request->get_header('Authorization');
-		$api_token = getenv('API_TOKEN');
+		$api_token = getenv('API_ADMIN_TOKEN');
 
 		$arr = explode(' ', $auth_header);
 		unset($arr[0]);
 		$request_api_token = implode(' ', $arr); // MyFile.jpg:foo:bar
 
+		if (isset($api_token) && $request_api_token === $api_token) {
+			return true;
+		}
+		return false;
+	}
+	/**
+	 * Check if a given request has access to create site
+	 *
+	 * @param WP_REST_Request $request Full data about the request.
+	 * @return WP_Error|bool
+	 */
+	public function create_item_permissions_check($request)
+	{
+		$auth_header = $request->get_header('Authorization');
+		$api_token = getenv('API_ADMIN_TOKEN');
+
+		$arr = explode(' ', $auth_header);
+		unset($arr[0]);
+		$request_api_token = implode(' ', $arr);
 		if (isset($api_token) && $request_api_token === $api_token) {
 			return true;
 		}
@@ -291,7 +360,7 @@ class SiteApi extends WP_REST_Controller
 		$data = [];
 		$fields = $this->get_fields_for_response($request);
 
-		if (rest_is_field_included()) {
+		if (rest_is_field_included('id', $fields)) {
 			$data['id'] = $item->id;
 		}
 
@@ -342,6 +411,37 @@ class SiteApi extends WP_REST_Controller
 		return $user_id;
 	}
 	/**
+	 * Get the site, if the ID is valid.
+	 *
+	 * @since 4.7.2
+	 *
+	 * @param int $id Supplied ID.
+	 * @return WP_User|WP_Error True if ID is valid, WP_Error otherwise.
+	 */
+	protected function get_site($id)
+	{
+		// $error = new WP_Error(
+		// 	'rest_user_invalid_id',
+		// 	__( 'Invalid user ID.' ),
+		// 	array( 'status' => 404 )
+		// );
+
+		// if ( (int) $id <= 0 ) {
+		// 	return $error;
+		// }
+
+		// $user = get_userdata( (int) $id );
+		// if ( empty( $user ) || ! $user->exists() ) {
+		// 	return $error;
+		// }
+
+		// if ( is_multisite() && ! is_user_member_of_blog( $user->ID ) ) {
+		// 	return $error;
+		// }
+
+		// return $user;
+	}
+	/**
 	 * Retrieves the item schema, conforming to JSON Schema.
 	 *
 	 * @since 5.0.0
@@ -356,13 +456,13 @@ class SiteApi extends WP_REST_Controller
 
 		$schema = [
 			'$schema' => 'http://json-schema.org/draft-04/schema#',
-			'title' => 'new-site',
+			'title' => 'site',
 			'type' => 'object',
 			'properties' => [
 				self::PROP_ID => [
 					'description' => __('Unique identifier for the object.'),
 					'type' => 'integer',
-					'context' => ['view', 'embed'],
+					'context' => ['view', 'embed', 'edit'],
 					'readonly' => true,
 				],
 				self::PROP_EMAIL => [
