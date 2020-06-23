@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: Staticprops.com
  * Description: This plugin facilitates wordpress integration with SSG (Static Site Generators).
@@ -14,7 +15,7 @@
  * Usefull for generating all avaliable paths
  *
  * @param array $data Options for the function.
- * @return string|null Post title for the latest,  * or null if none.
+ * @return string|null Post title for the latest, * or null if none.
  */
 if (!defined('ABSPATH')) {
 	exit();
@@ -38,7 +39,7 @@ require_once __DIR__ . '/custom-apis/site-api.php';
 require_once __DIR__ . '/custom-apis/paths-api.php';
 // require_once __DIR__ . '/custom-preview.php';
 // require_once __DIR__ . '/redirect-frontpage.php';
-require_once __DIR__ . '/settings/main.php';
+// require_once __DIR__ . '/settings/main.php';
 
 /**
  * Function to register our new routes from the controller.

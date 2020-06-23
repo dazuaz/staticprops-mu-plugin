@@ -92,13 +92,9 @@ class SiteApi extends WP_REST_Controller
 		if (!function_exists('wpmu_delete_blog')) {
 			require_once ABSPATH . '/wp-admin/includes/ms.php';
 		}
-		$drop = true;
-		wpmu_delete_blog($site_id, $drop);
-
-		return new WP_REST_Response(
-			(object) ['site_id' => $site_id, 'message' => 'Site deleted successfully'],
-			200
-		);
+		// $drop = true;
+		// wpmu_delete_blog($site_id, $drop);
+		wpmu_delete_blog($site_id);
 
 		if (get_blog_status($site_id, 'deleted')) {
 			return new WP_REST_Response(
