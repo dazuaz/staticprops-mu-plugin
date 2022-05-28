@@ -34,12 +34,8 @@ add_action('pre_option_blog_public', '__return_zero');
 
 global $staticprops;
 
-require_once __DIR__ . '/custom-apis/menus-api.php';
 require_once __DIR__ . '/custom-apis/site-api.php';
 require_once __DIR__ . '/custom-apis/paths-api.php';
-// require_once __DIR__ . '/custom-preview.php';
-// require_once __DIR__ . '/redirect-frontpage.php';
-// require_once __DIR__ . '/settings/main.php';
 
 /**
  * Function to register our new routes from the controller.

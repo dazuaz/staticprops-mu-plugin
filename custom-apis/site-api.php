@@ -59,6 +59,17 @@ class SiteApi extends WP_REST_Controller
 					],
 				],
 				[
+					'methods' => WP_REST_Server::EDITABLE,
+					'callback' => [$this, 'update_item'],
+					'permission_callback' => [
+						$this,
+						'update_item_permissions_check',
+					],
+					'args' => $this->get_endpoint_args_for_item_schema(
+						WP_REST_Server::EDITABLE
+					),
+				],
+				[
 					'methods' => WP_REST_Server::DELETABLE,
 					'callback' => [$this, 'delete_item'],
 					'permission_callback' => [
@@ -66,11 +77,11 @@ class SiteApi extends WP_REST_Controller
 						'delete_item_permissions_check',
 					],
 					'args' => [
-						'force' => [
+						'drop' => [
 							'type' => 'boolean',
 							'default' => false,
 							'description' => __(
-								'Required to be true, as users do not support trashing.'
+								'If true, site is deleted from the database.'
 							),
 						],
 					],
@@ -88,26 +99,69 @@ class SiteApi extends WP_REST_Controller
 	public function delete_item($request)
 	{
 		$site_id = $request['id'];
+		$drop = isset($request['drop']) ? (bool) $request['drop'] : false;
 
 		if (!function_exists('wpmu_delete_blog')) {
 			require_once ABSPATH . '/wp-admin/includes/ms.php';
 		}
 		// $drop = true; // add this for instantly deleting websites
-		// wpmu_delete_blog($site_id, $drop);
-		wpmu_delete_blog($site_id);
+		wpmu_delete_blog($site_id, $drop);
 
-		if (get_blog_status($site_id, 'deleted')) {
+		if ($drop) {
 			return new WP_REST_Response(
-				(object) ['site_id' => $site_id, 'message' => 'Site deleted successfully'],
+				(object) [
+					'site_id' => $site_id,
+					'drop' => $drop,
+					'message' => 'Site deleted successfully',
+				],
 				200
 			);
 		} else {
+			if (get_blog_status($site_id, 'deleted')) {
+				return new WP_REST_Response(
+					(object) [
+						'site_id' => $site_id,
+						'drop' => $drop,
+						'message' => 'Site disabled successfully',
+					],
+					200
+				);
+			}
+		}
+
+		return new WP_Error(
+			'rest_cannot_delete',
+			__('The site cannot be deleted.'),
+			['status' => 500]
+		);
+	}
+	public function update_item($request)
+	{
+		$site_id = $request['id'];
+		$result = update_blog_status($site_id, 'deleted', '0');
+		/**
+		 * Fires after a network site is activated.
+		 *
+		 * @since MU (3.0.0)
+		 *
+		 * @param string $id The ID of the activated site.
+		 */
+		do_action('activate_blog', $site_id);
+
+		if ($result === false) {
 			return new WP_Error(
-				'rest_cannot_delete',
-				__('The site cannot be deleted.'),
+				'rest_cannot_edit',
+				__('The site cannot be activated.'),
 				['status' => 500]
 			);
 		}
+		return new WP_REST_Response(
+			(object) [
+				'site_id' => $site_id,
+				'message' => 'Site enabled successfully',
+			],
+			200
+		);
 	}
 	/**
 	 * Get one item from the collection
@@ -268,7 +322,7 @@ class SiteApi extends WP_REST_Controller
 	 * @param WP_REST_Request $request Full data about the request.
 	 * @return WP_Error|bool
 	 */
-	public function delete_item_permissions_check($request)
+	private function admin_token_permissions_check($request)
 	{
 		$auth_header = $request->get_header('Authorization');
 		$api_token = getenv('API_ADMIN_TOKEN');
@@ -288,18 +342,30 @@ class SiteApi extends WP_REST_Controller
 	 * @param WP_REST_Request $request Full data about the request.
 	 * @return WP_Error|bool
 	 */
+	public function delete_item_permissions_check($request)
+	{
+		return $this->admin_token_permissions_check($request);
+	}
+
+	/**
+	 * Check if a given request has access to create site
+	 *
+	 * @param WP_REST_Request $request Full data about the request.
+	 * @return WP_Error|bool
+	 */
+	public function update_item_permissions_check($request)
+	{
+		return $this->admin_token_permissions_check($request);
+	}
+	/**
+	 * Check if a given request has access to create site
+	 *
+	 * @param WP_REST_Request $request Full data about the request.
+	 * @return WP_Error|bool
+	 */
 	public function create_item_permissions_check($request)
 	{
-		$auth_header = $request->get_header('Authorization');
-		$api_token = getenv('API_ADMIN_TOKEN');
-
-		$arr = explode(' ', $auth_header);
-		unset($arr[0]);
-		$request_api_token = implode(' ', $arr);
-		if (isset($api_token) && $request_api_token === $api_token) {
-			return true;
-		}
-		return false;
+		return $this->admin_token_permissions_check($request);
 	}
 	/**
 	 * Prepare the item for create or update operation

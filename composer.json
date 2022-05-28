@@ -1,24 +1,24 @@
 {
-	"name": "staticprops/staticprops-mu-plugin",
-	"description": "Staticprops Must-Use Plugin, that adds specefic support to use Wordpress as a on-build Headless CMS",
-	"keywords": [
-		"wordpress",
-		"headless",
-		"plugin",
-		"staticprops"
-	],
-	"homepage": "https://staticprops.com",
-	"license": "MIT",
-	"authors": [
-		{
-			"name": "Daniel Zuloaga",
-			"email": "daniel@staticprops.com",
-			"homepage": "https://staticprops.com"
-		}
-	],
-	"type": "wordpress-plugin",
-	"require": {
-		"php": ">=7.1",
-		"composer/installers": "v1.9.0"
-	}
+  "name": "staticprops/staticprops-mu-plugin",
+  "description": "Staticprops Must-Use Plugin, that adds specefic support to use Wordpress as a on-build Headless CMS",
+  "keywords": [
+    "wordpress",
+    "headless",
+    "plugin",
+    "staticprops"
+  ],
+  "homepage": "https://staticprops.com",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Daniel Zuloaga",
+      "email": "daniel@staticprops.com",
+      "homepage": "https://staticprops.com"
+    }
+  ],
+  "type": "wordpress-plugin",
+  "require": {
+    "php": ">=7.1",
+    "composer/installers": "v2.0.0"
+  }
 }
