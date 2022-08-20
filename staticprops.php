@@ -111,7 +111,7 @@ add_action( 'graphql_register_types', function() {
 		'description' => __( 'The raw content without filters/decoding applied', 'staticprops.com' ),
 		'resolve' => function( \WPGraphQL\Model\Post $post ) {
 			$post_object = ! empty( $post->databaseId  ) ? get_post( $post->databaseId ) : null;
-			return isset( $post_object->post_content ) ? $post_object->post_content : null;
+			return isset( $post_object->post_content ) ?  apply_filters( 'the_content', $post_object->post_content) : null;
 		}
 	]);
 
