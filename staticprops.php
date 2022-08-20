@@ -103,3 +103,16 @@ if (getenv('WP_DEBUG')) {
 
 // We need some CSS to position the paragraph.
 // TODO allow user to choose more options.
+
+add_action( 'graphql_register_types', function() {
+
+	register_graphql_field( 'Post', 'rawContent', [
+		'type' => 'String',
+		'description' => __( 'The raw content without filters/decoding applied', 'staticprops.com' ),
+		'resolve' => function( \WPGraphQL\Model\Post $post ) {
+			$post_object = ! empty( $post->databaseId  ) ? get_post( $post->databaseId ) : null;
+			return isset( $post_object->post_content ) ? $post_object->post_content : null;
+		}
+	]);
+
+});
